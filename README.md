@@ -1,4 +1,4 @@
-# 🎮 Discord Roblox XP Bot
+# 🎮 Discord Roblox XP Bot for Expedition Team
 
 Bot Discord untuk mengelola sistem XP berbasis **Roblox username** dan **MongoDB**.  
 Fitur meliputi: pemberian XP, pengecekan rank, dan leaderboard.  
