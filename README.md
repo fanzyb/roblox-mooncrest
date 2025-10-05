@@ -42,6 +42,8 @@ npm install discord.js mongoose dotenv node-fetch
 ```
 TOKEN=DISCORD_BOT_TOKEN
 MONGO_URI=mongodb+srv://user:pass@cluster.mongodb.net/dbname
+GUILD_ID=
+CLIENT_ID=
 ```
 
 2. Buat file config.json
