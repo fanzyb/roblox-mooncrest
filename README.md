@@ -33,7 +33,7 @@ Fitur meliputi: pemberian XP, pengecekan rank, dan leaderboard.
 Install dengan:
 
 ```bash
-npm install discord.js mongoose dotenv node-fetch``
+npm install discord.js mongoose dotenv node-fetch ```
 
 ## ⚙️ Setup
 1. Buat file .env
