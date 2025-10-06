@@ -1,11 +1,12 @@
-import { 
-  Client, 
-  GatewayIntentBits, 
-  EmbedBuilder, 
-  PermissionFlagsBits, 
-  ActionRowBuilder, 
-  ButtonBuilder, 
-  ButtonStyle 
+import {
+  Client,
+  GatewayIntentBits,
+  EmbedBuilder,
+  PermissionFlagsBits,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  SlashCommandBuilder
 } from "discord.js";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
@@ -83,6 +84,53 @@ async function isInRobloxGroup(userId, groupId = config.groupId) {
   if (!data || !data.data) return false;
   return data.data.some(g => g.group.id === groupId);
 }
+
+// --- Slash Commands Register (local, bisa deploy ke guild) ---
+client.on("ready", async () => {
+  console.log(`✅ Logged in as ${client.user.tag}`);
+
+  const commands = [
+    new SlashCommandBuilder()
+      .setName("xp")
+      .setDescription("Manage user XP")
+      .addSubcommand(sub =>
+        sub
+          .setName("add")
+          .setDescription("Add XP")
+          .addStringOption(opt => opt.setName("username").setDescription("Roblox username").setRequired(true))
+          .addIntegerOption(opt => opt.setName("amount").setDescription("XP amount").setRequired(true))
+      )
+      .addSubcommand(sub =>
+        sub
+          .setName("remove")
+          .setDescription("Remove XP")
+          .addStringOption(opt => opt.setName("username").setDescription("Roblox username").setRequired(true))
+          .addIntegerOption(opt => opt.setName("amount").setDescription("XP amount").setRequired(true))
+      )
+      .addSubcommand(sub =>
+        sub
+          .setName("set")
+          .setDescription("Set XP")
+          .addStringOption(opt => opt.setName("username").setDescription("Roblox username").setRequired(true))
+          .addIntegerOption(opt => opt.setName("amount").setDescription("XP amount").setRequired(true))
+      ),
+
+    new SlashCommandBuilder()
+      .setName("rank")
+      .setDescription("Check rank of a Roblox user")
+      .addStringOption(opt => opt.setName("username").setDescription("Roblox username").setRequired(true)),
+
+    new SlashCommandBuilder()
+      .setName("leaderboard")
+      .setDescription("Show XP leaderboard")
+      .addIntegerOption(opt =>
+        opt.setName("page").setDescription("Page number").setRequired(false)
+      )
+  ];
+
+  await client.application.commands.set(commands);
+  console.log("✅ Slash commands registered");
+});
 
 // --- Interaction Handler ---
 client.on("interactionCreate", async (interaction) => {
@@ -176,15 +224,19 @@ client.on("interactionCreate", async (interaction) => {
   // --- /leaderboard ---
   if (interaction.commandName === "leaderboard") {
     const limit = 10;
-    let page = 1;
+    let page = interaction.options.getInteger("page") || 1;
 
     const generateEmbed = async (page) => {
       const totalUsers = await User.countDocuments();
-      const totalPages = Math.ceil(totalUsers / limit);
+      const totalPages = Math.max(1, Math.ceil(totalUsers / limit));
+
       if (page < 1) page = 1;
       if (page > totalPages) page = totalPages;
 
-      const users = await User.find().sort({ xp: -1 }).skip((page - 1) * limit).limit(limit);
+      const users = await User.find()
+        .sort({ xp: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit);
 
       let description = "";
       let rank = (page - 1) * limit + 1;
@@ -198,7 +250,7 @@ client.on("interactionCreate", async (interaction) => {
           new EmbedBuilder()
             .setTitle(`🏆 Climbers Leaderboard (Page ${page}/${totalPages})`)
             .setColor("#1B1464")
-            .setDescription(description)
+            .setDescription(description || "⚠️ No users found.")
         ],
         components: [
           new ActionRowBuilder().addComponents(
@@ -217,13 +269,15 @@ client.on("interactionCreate", async (interaction) => {
       };
     };
 
-    const leaderboardMessage = await interaction.reply(await generateEmbed(page));
+    let leaderboardMessage = await interaction.reply(await generateEmbed(page));
     const collector = leaderboardMessage.createMessageComponentCollector({ time: 60000 });
 
     collector.on("collect", async (btnInteraction) => {
       if (!btnInteraction.isButton()) return;
+
       if (btnInteraction.customId === "prev") page--;
       if (btnInteraction.customId === "next") page++;
+
       await btnInteraction.update(await generateEmbed(page));
     });
 
@@ -235,9 +289,7 @@ client.on("interactionCreate", async (interaction) => {
   }
 });
 
-// --- Ready & MongoDB Connect ---
-client.once("ready", () => console.log(`✅ Logged in as ${client.user.tag}`));
-
+// --- MongoDB Connect & Start Bot ---
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log("✅ Connected to MongoDB");
