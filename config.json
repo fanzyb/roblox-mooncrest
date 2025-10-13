@@ -2,6 +2,7 @@
   "groupId": 390278660,
   "xpManagerRoles": ["1423533541731471420"],
   "xpLogChannelId": "990692180475666462",
+  "embedColor": "#1B1464",
   "levels": [
     { "name": "Climber", "xp": 0 },
     { "name": "Beginner", "xp": 10 },
