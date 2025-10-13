@@ -66,7 +66,7 @@ async function getRobloxUser(username) {
   });
   const data = await res.json();
   if (!data.data || data.data.length === 0) return null;
-  return data.data[0]; // {id, name, displayName}
+  return data.data[0];
 }
 
 async function getRobloxAvatar(userId) {
@@ -85,9 +85,34 @@ async function isInRobloxGroup(userId, groupId = config.groupId) {
   return data.data.some(g => g.group.id === groupId);
 }
 
-// --- Slash Commands Register (local, bisa deploy ke guild) ---
+// --- Slash Commands Register ---
 client.on("ready", async () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
+
+  const guild = client.guilds.cache.first();
+  const serverName = guild ? guild.name : "the server";
+
+  function updatePresence() {
+    const date = new Date().toLocaleDateString("id-ID", {
+      timeZone: "Asia/Jakarta",
+      day: "2-digit",
+      month: "long",
+      year: "numeric"
+    });
+
+    client.user.setPresence({
+      activities: [
+        {
+          name: `${serverName} — ${date}`,
+          type: 3
+        }
+      ],
+      status: "online"
+    });
+  }
+
+  updatePresence();
+  setInterval(updatePresence, 1000 * 60 * 60);
 
   const commands = [
     new SlashCommandBuilder()
@@ -163,19 +188,18 @@ client.on("interactionCreate", async (interaction) => {
     if (action === "remove") user.xp = Math.max(user.xp - amount, 0);
     if (action === "set") user.xp = amount;
 
-    user.robloxUsername = robloxData.name; // sync username
+    user.robloxUsername = robloxData.name;
     await user.save();
 
     const newLevel = getLevel(user.xp).levelName;
     let levelMsg = "";
     if (newLevel !== oldLevel) levelMsg = ` 🎉 **${robloxData.name} has leveled up to ${newLevel}!**`;
 
-    // --- XP Log ---
     const logChannel = interaction.guild.channels.cache.get(config.xpLogChannelId);
     if (logChannel) {
       const logEmbed = new EmbedBuilder()
         .setTitle("📊 XP Log")
-        .setColor("#1B1464")
+        .setColor(config.embedColor)
         .addFields(
           { name: "Action", value: action, inline: true },
           { name: "Amount", value: amount.toString(), inline: true },
@@ -216,7 +240,7 @@ client.on("interactionCreate", async (interaction) => {
         { name: "Progress", value: `${bar} (${progressPercent}%)`, inline: false },
         { name: "Next Level", value: xpNeededText, inline: false }
       )
-      .setColor("#1B1464");
+      .setColor(config.embedColor);
 
     await interaction.reply({ embeds: [embed] });
   }
@@ -249,7 +273,7 @@ client.on("interactionCreate", async (interaction) => {
         embeds: [
           new EmbedBuilder()
             .setTitle(`🏆 Climbers Leaderboard (Page ${page}/${totalPages})`)
-            .setColor("#1B1464")
+            .setColor(config.embedColor)
             .setDescription(description || "⚠️ No users found.")
         ],
         components: [
