@@ -1,8 +1,11 @@
 {
   "groupId": 390278660,
-  "xpManagerRoles": ["1423533541731471420"],
-  "xpLogChannelId": "990692180475666462",
+  "xpManagerRoles": ["1418308907956305920"],
+  "xpLogChannelId": "1423573212826046524",
   "embedColor": "#1B1464",
+  "rewardLogChannelId": "1427909416229011469",
+  "rewardManagerRoles": ["1415311652240359485"],
+  "debugManagerRoles": ["1415311652240359485"],
   "levels": [
     { "name": "Climber", "xp": 0 },
     { "name": "Beginner", "xp": 10 },
@@ -18,5 +21,17 @@
     { "name": "Supreme", "xp": 5000 },
     { "name": "Galactic", "xp": 6000 },
     { "name": "Eternal", "xp": 7000 }
+  ],
+  "achievements": [
+    { "id": 1, "name": "1️⃣Pioneer", "description": "Users who participated in the first expedition on Mooncrest." },
+    { "id": 2, "name": "🔥5x Streak Expo", "description": "Participation in 5 consecutive expeditions." },
+    { "id": 3, "name": "🔥10x Streak Expo", "description": "Participation in 10 consecutive expeditions." },
+    { "id": 4, "name": "💥Expo Addictive", "description": "Participated 50 times in expeditions." },
+    { "id": 5, "name": "💥Expo Loyalist", "description": "Participated 100 times in expeditions." },
+    { "id": 6, "name": "🧗‍♂️Local Guide", "description": "Hosted 50 expeditions." },
+    { "id": 7, "name": "🧗‍♂️Global Guide", "description": "Hosted 100 expeditions." },
+    { "id": 8, "name": "👑Mountain Conqueror", "description": "Participate in all mountain expeditions." },
+    { "id": 9, "name": "🏆Event Winners", "description": "Winning the event at Mooncrest" },
+    { "id": 10, "name": "🏆Challenge Winners", "description": "Winning the challenge at Mooncrest" }
   ]
 }
