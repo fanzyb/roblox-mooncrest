@@ -18,11 +18,12 @@ dotenv.config();
 
 // ----------------- Mongo Schema -----------------
 const userSchema = new mongoose.Schema({
-    robloxId: { type: String, required: true, unique: true },
+    // robloxId: { type: String, required: true, unique: true } - Pastikan ini sudah diterapkan di DB
+    robloxId: { type: String, required: true, unique: true }, 
     robloxUsername: { type: String, required: true },
     xp: { type: Number, default: 0 },
-    expeditions: { type: Number, default: 0 }, // Field untuk menyimpan jumlah ekspedisi
-    achievements: { type: [Number], default: [] } // numeric achievement IDs
+    expeditions: { type: Number, default: 0 },
+    achievements: { type: [Number], default: [] }
 });
 const User = mongoose.model("User", userSchema);
 
@@ -96,17 +97,20 @@ async function isInRobloxGroup(userId, groupId = config.groupId) {
     }
 }
 
-async function getRobloxGroupMemberCount(groupId = config.groupId) {
+async function getRobloxGroupData(groupId = config.groupId) {
     try {
         const res = await fetch(`https://groups.roblox.com/v1/groups/${groupId}`);
         const data = await res.json();
-        if (data && typeof data.memberCount === 'number') {
-            return data.memberCount;
+        if (data && typeof data.memberCount === 'number' && data.name) {
+            return {
+                name: data.name,
+                memberCount: data.memberCount
+            };
         }
-        return 0;
+        return { name: "Roblox Group", memberCount: 0 };
     } catch (e) {
-        console.error("Roblox group member count fetch error:", e);
-        return 0;
+        console.error("Roblox group data fetch error:", e);
+        return { name: "Roblox Group", memberCount: 0 };
     }
 }
 
@@ -121,20 +125,22 @@ client.on("ready", async () => {
     const serverName = guild ? guild.name : "the server";
 
     async function updatePresence() {
-        const memberCount = await getRobloxGroupMemberCount(); 
+        const groupData = await getRobloxGroupData(); 
+        
+        const newStatus = `${groupData.name} with ${groupData.memberCount.toLocaleString()} Members`;
 
         client.user.setPresence({
             activities: [{ 
-                name: `Counting ${memberCount.toLocaleString()} Members`, 
+                name: newStatus, 
                 type: 3 // Watching
             }],
             status: "online"
         });
-        console.log(`Presence updated: Counting ${memberCount.toLocaleString()} Members`);
+        console.log(`Presence updated: ${newStatus}`);
     }
-
+    
     updatePresence();
-    setInterval(updatePresence, 1000 * 60 * 10); // Update setiap 10 menit
+    setInterval(updatePresence, 1000 * 60 * 10); 
 
     // build slash commands
     const commands = [
@@ -184,10 +190,19 @@ client.on("ready", async () => {
             .setDescription("Check rank of a Roblox user")
             .addStringOption(opt => opt.setName("username").setDescription("Roblox username").setRequired(true)),
 
-        // leaderboard
+        // leaderboard (DIUBAH)
         new SlashCommandBuilder()
             .setName("leaderboard")
-            .setDescription("Show XP leaderboard")
+            .setDescription("Show XP or Expedition leaderboard")
+            .addStringOption(opt => 
+                opt.setName("type")
+                    .setDescription("Type of leaderboard (XP or Expedition)")
+                    .setRequired(false)
+                    .addChoices(
+                        { name: 'XP', value: 'xp' },
+                        { name: 'Expedition', value: 'expo' },
+                    )
+            )
             .addIntegerOption(opt => opt.setName("page").setDescription("Page number").setRequired(false)),
 
         // reward (interactive add/remove)
@@ -242,12 +257,11 @@ client.on("interactionCreate", async (interaction) => {
             const guild = interaction.guild;
             const rewardLogChannel = guild ? guild.channels.cache.get(config.rewardLogChannelId) : null;
 
-            // Logika Reward Ditambahkan (Kembali ke Log Sederhana)
             if (action === "reward_add") {
                 if (!user.achievements.includes(selectedId)) user.achievements.push(selectedId);
                 await user.save();
 
-                // Log Internal Sederhana
+                // log
                 if (rewardLogChannel) {
                     const logEmbed = new EmbedBuilder()
                         .setTitle("🎖 Achievement Added")
@@ -264,7 +278,6 @@ client.on("interactionCreate", async (interaction) => {
                 return interaction.update({ content: `✅ Added **${achv.name}** to **${robloxData.name}**`, components: [] });
             }
 
-            // Logika Reward Dihapus (Tetap Sederhana)
             if (action === "reward_remove") {
                 user.achievements = user.achievements.filter(a => a !== selectedId);
                 await user.save();
@@ -317,13 +330,15 @@ client.on("interactionCreate", async (interaction) => {
 
             if (action === "add") {
                 user.xp += amount;
+                // LOGIKA BARU: Setiap penambahan XP dihitung 1 ekspedisi
                 user.expeditions = (user.expeditions || 0) + 1;
             }
             if (action === "remove") {
                 user.xp = Math.max(user.xp - amount, 0);
-                user.expeditions = Math.max((user.expeditions || 0) - 1, 0);
+                // LOGIKA BARU: Pengurangan XP mengurangi 1 ekspedisi
+                user.expeditions = Math.max((user.expeditions || 0) - 1, 0); 
             }
-            if (action === "set") user.xp = amount; 
+            if (action === "set") user.xp = amount; // Tidak mempengaruhi hitungan ekspedisi
 
             await user.save();
 
@@ -482,7 +497,7 @@ client.on("interactionCreate", async (interaction) => {
                 .addFields(
                     { name: "XP", value: String(user.xp), inline: true },
                     { name: "Level", value: levelName, inline: true },
-                    { name: "Expeditions", value: String(user.expeditions || 0), inline: true },
+                    { name: "Expeditions", value: String(user.expeditions || 0), inline: true }, // Menampilkan Expeditions
                     { name: "Progress", value: `${bar} (${progressPercent}%)`, inline: false },
                     { name: "Next Level", value: xpNeededText, inline: false },
                     { name: "🏅 Achievements", value: achvs, inline: false }
@@ -490,57 +505,128 @@ client.on("interactionCreate", async (interaction) => {
             return interaction.reply({ embeds: [embed] });
         }
 
-        // ---------- /leaderboard ----------
+        // ---------- /leaderboard (PERBAIKAN STABIL SORT) ----------
         if (command === "leaderboard") {
             const limit = 10;
             let page = interaction.options.getInteger("page") || 1;
+            let type = interaction.options.getString("type") || 'xp'; 
 
-            const generateEmbed = async (pageNum) => {
+            const generateEmbed = async (pageNum, lbType) => {
+                const sortField = lbType === 'expo' ? 'expeditions' : 'xp';
+                const sortTitle = lbType === 'expo' ? 'Expedition' : 'XP';
+
                 const totalUsers = await User.countDocuments();
                 const totalPages = Math.max(1, Math.ceil(totalUsers / limit));
                 if (pageNum < 1) pageNum = 1;
                 if (pageNum > totalPages) pageNum = totalPages;
 
-                const users = await User.find().sort({ xp: -1 }).skip((pageNum - 1) * limit).limit(limit);
+                // FIX: Tambahkan robloxId sebagai kunci sortir sekunder untuk hasil yang STABIL
+                const users = await User.find()
+                    .sort({ [sortField]: -1, robloxId: 1 }) // Urutkan: 1. Field terpilih (desc), 2. robloxId (asc)
+                    .skip((pageNum - 1) * limit)
+                    .limit(limit);
+
                 let desc = "";
                 let rank = (pageNum - 1) * limit + 1;
                 for (const u of users) {
-                    desc += `**#${rank}** - **${u.robloxUsername}** → ${u.xp} XP\n`;
+                    const value = u[sortField] || 0; 
+                    desc += `**#${rank}** - **${u.robloxUsername}** → ${value} ${sortTitle}\n`;
                     rank++;
                 }
+
+                const buttonRow = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder().setCustomId(`lb_prev_${lbType}_${pageNum}`).setLabel("⬅️ Prev").setStyle(ButtonStyle.Primary).setDisabled(pageNum === 1),
+                    new ButtonBuilder().setCustomId(`lb_next_${lbType}_${pageNum}`).setLabel("Next ➡️").setStyle(ButtonStyle.Primary).setDisabled(pageNum === totalPages)
+                );
+                
+                const switchRow = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder().setCustomId(`lb_switch_${lbType === 'xp' ? 'expo' : 'xp'}_${pageNum}`).setLabel(`Switch to ${lbType === 'xp' ? 'Expedition' : 'XP'} LB`).setStyle(ButtonStyle.Secondary)
+                );
+
 
                 return {
                     embeds: [
                         new EmbedBuilder()
-                            .setTitle(`🏆 Leaderboard (Page ${pageNum}/${totalPages})`)
+                            .setTitle(`🏆 Leaderboard ${sortTitle} (Page ${pageNum}/${totalPages})`)
                             .setColor(config.embedColor)
                             .setDescription(desc || "⚠️ No users found.")
                     ],
-                    components: [
-                        new ActionRowBuilder().addComponents(
-                            new ButtonBuilder().setCustomId("prev_lb").setLabel("⬅️ Prev").setStyle(ButtonStyle.Primary).setDisabled(pageNum === 1),
-                            new ButtonBuilder().setCustomId("next_lb").setLabel("Next ➡️").setStyle(ButtonStyle.Primary).setDisabled(pageNum === totalPages)
-                        )
-                    ]
+                    components: [buttonRow, switchRow]
                 };
             };
+            
+            // Handler interaksi tombol (paging dan switch)
+            if (interaction.isButton()) {
+                // Parsing customId: lb_[action]_[type]_[page]
+                const parts = interaction.customId.split("_");
+                // parts[0] = 'lb', parts[1] = action (prev/next/switch), parts[2] = type (xp/expo), parts[3] = page
+                const btnAction = parts[1]; 
+                const btnType = parts[2]; 
+                let currentPage = parseInt(parts[3]); 
+                
+                let newType = btnType;
+                let newPage = currentPage;
+                
+                if (btnAction === 'switch') {
+                    // Ketika switch, type berubah, page tetap
+                    newType = btnType;
+                    newPage = currentPage;
+                } else if (btnAction === 'prev') {
+                    // Paging prev
+                    newPage = currentPage - 1;
+                } else if (btnAction === 'next') {
+                    // Paging next
+                    newPage = currentPage + 1;
+                }
 
-            const sent = await interaction.reply(await generateEmbed(page));
-            // collector for buttons — ephemeral messages cannot have collectors reliably in all cases; keep non-ephemeral for paging
+                // Simpan page dan type baru ke variabel luar scope collector untuk digunakan di end()
+                page = newPage;
+                type = newType;
+
+                await interaction.update(await generateEmbed(newPage, newType));
+                return;
+            }
+
+
+            // Interaksi Slash Command Awal
+            const sent = await interaction.reply(await generateEmbed(page, type));
+            
+            // Collector untuk tombol
             const msg = await interaction.fetchReply();
             const collector = msg.createMessageComponentCollector({ time: 60000 });
 
             collector.on("collect", async (btn) => {
                 if (!btn.isButton()) return;
-                if (btn.customId === "prev_lb") page--;
-                if (btn.customId === "next_lb") page++;
-                await btn.update(await generateEmbed(page));
+                
+                const parts = btn.customId.split("_");
+                const btnAction = parts[1]; 
+                const btnType = parts[2]; 
+                let currentPage = parseInt(parts[3]) || page; 
+                
+                let newType = type;
+                let newPage = page;
+                
+                if (btnAction === 'switch') {
+                    newType = btnType;
+                    newPage = currentPage;
+                } else {
+                    newType = btnType;
+                    newPage = btnAction === 'prev' ? currentPage - 1 : currentPage + 1;
+                }
+
+                page = newPage;
+                type = newType;
+
+                await btn.update(await generateEmbed(newPage, newType));
             });
 
             collector.on("end", async () => {
                 try {
-                    const final = (await generateEmbed(page));
-                    final.components[0].components.forEach(c => c.setDisabled(true));
+                    const final = (await generateEmbed(page, type));
+                    // Matikan semua tombol di kedua row
+                    final.components.forEach(row => 
+                        row.components.forEach(c => c.setDisabled(true))
+                    );
                     await interaction.editReply(final);
                 } catch (e) { /* ignore */ }
             });
@@ -584,12 +670,11 @@ client.on("interactionCreate", async (interaction) => {
             const totalUsers = await User.countDocuments();
             const users = await User.find({}, { xp: 1, expeditions: 1 }).lean();
             const totalXP = users.reduce((s, u) => s + (u.xp || 0), 0);
-            const totalExpeditions = users.reduce((s, u) => s + (u.expeditions || 0), 0); 
+            const totalExpeditions = users.reduce((s, u) => s + (u.expeditions || 0), 0);
             const uptime = Math.floor(process.uptime());
             const h = Math.floor(uptime / 3600);
             const m = Math.floor((uptime % 3600) / 60);
 
-            // ensure commands cache size (fallback to fetch)
             let commandsCount = 0;
             try {
                 commandsCount = client.application?.commands?.cache?.size ?? (await client.application.commands.fetch()).size;
