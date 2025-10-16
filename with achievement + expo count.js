@@ -469,42 +469,6 @@ client.on("interactionCreate", async (interaction) => {
             }
         }
 
-        // ---------- /rank ----------
-        if (command === "rank") {
-            const username = interaction.options.getString("username");
-            const robloxData = await getRobloxUser(username);
-            if (!robloxData) return interaction.reply({ content: "⚠️ Roblox user not found.", ephemeral: true });
-
-            let user = await User.findOne({ robloxId: robloxData.id.toString() });
-            if (!user) {
-                user = new User({ robloxId: robloxData.id.toString(), robloxUsername: robloxData.name, xp: 0 });
-                await user.save();
-            }
-
-            const avatar = await getRobloxAvatar(robloxData.id);
-            const { levelName, bar, progressPercent, xpNeededText } = getLevel(user.xp);
-
-            const achvs = user.achievements
-                .map(id => achievementsConfig.find(a => a.id === id)?.name)
-                .filter(Boolean)
-                .join("\n") || "— None —";
-
-            const embed = new EmbedBuilder()
-                .setTitle(`${robloxData.displayName} (@${robloxData.name})`)
-                .setURL(`https://www.roblox.com/users/${robloxData.id}/profile`)
-                .setThumbnail(avatar)
-                .setColor(config.embedColor)
-                .addFields(
-                    { name: "XP", value: String(user.xp), inline: true },
-                    { name: "Level", value: levelName, inline: true },
-                    { name: "Expeditions", value: String(user.expeditions || 0), inline: true }, // Menampilkan Expeditions
-                    { name: "Progress", value: `${bar} (${progressPercent}%)`, inline: false },
-                    { name: "Next Level", value: xpNeededText, inline: false },
-                    { name: "🏅 Achievements", value: achvs, inline: false }
-                );
-            return interaction.reply({ embeds: [embed] });
-        }
-
         // ---------- /leaderboard (PERBAIKAN STABIL SORT) ----------
         if (command === "leaderboard") {
             const limit = 10;
