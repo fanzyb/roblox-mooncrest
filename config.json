@@ -1,11 +1,15 @@
 {
+  "guildId": "990692145834885131",
   "groupId": 390278660,
-  "xpManagerRoles": ["1418308907956305920"],
-  "xpLogChannelId": "1423573212826046524",
+  "xpManagerRoles": ["1423533541731471420"],
+  "xpLogChannelId": "990692180475666462",
   "embedColor": "#1B1464",
-  "rewardLogChannelId": "1427909416229011469",
-  "rewardManagerRoles": ["1415311652240359485"],
-  "debugManagerRoles": ["1415311652240359485"],
+  "rewardLogChannelId": "990692180475666462",
+  "rewardManagerRoles": ["990692651772805190"],
+  "debugManagerRoles": ["990692608600854568"],
+  "linkLogChannelId": "1428265190172135454",
+  "linkManagerRoles": ["1423533541731471420"],
+  "linkedRoleId": "1428267321750978671",
   "levels": [
     { "name": "Climber", "xp": 0 },
     { "name": "Beginner", "xp": 10 },
@@ -23,7 +27,7 @@
     { "name": "Eternal", "xp": 7000 }
   ],
   "achievements": [
-    { "id": 1, "name": "1️⃣Pioneer", "description": "Users who participated in the first expedition on Mooncrest." },
+    { "id": 1, "name": "1️⃣Pioneer", "description": "Users who participated in the first expedition on Mooncrest.", "roleId": "990692700825198652" },
     { "id": 2, "name": "🔥5x Streak Expo", "description": "Participation in 5 consecutive expeditions." },
     { "id": 3, "name": "🔥10x Streak Expo", "description": "Participation in 10 consecutive expeditions." },
     { "id": 4, "name": "💥Expo Addictive", "description": "Participated 50 times in expeditions." },
